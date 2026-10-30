@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>سند — إدارة الأجهزة والصيانة التقنية</title>
+  <link rel="icon" type="image/png" href="assets/images/sanad_logo_icon.png">
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body class="min-h-screen is-auth">
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="fixed bottom-5 left-5 z-[60] flex flex-col gap-2"></div>
+
+  <!-- Mobile sidebar backdrop -->
+  <div id="sidebar-backdrop" onclick="toggleMobileSidebar()" class="hidden fixed inset-0 bg-slate-900/40 z-30 lg:hidden no-print"></div>
+
+  <div class="flex min-h-screen">
+
+    <!-- ================================================================
+         SIDEBAR
+         ================================================================ -->
+    <aside id="main-sidebar" class="sidebar flex-shrink-0 flex-col hidden lg:flex no-print">
+      <div class="h-16 px-5 flex items-center gap-3 border-b border-[var(--line)]">
+        <img src="assets/images/sanad_logo_icon.png" alt="سند" class="w-8 h-8 object-contain">
+        <div class="leading-tight">
+          <div class="text-[15px] font-bold text-[var(--ink)]">سند</div>
+          <div class="text-[11px] text-[var(--ink-3)]">إدارة الأجهزة والصيانة</div>
+        </div>
+      </div>
+
+      <nav class="flex-1 overflow-y-auto px-3 pb-4">
+        <div class="sidebar-section">عام</div>
+        <button id="nav-btn-dashboard" onclick="switchView('dashboard')" class="nav-item-btn active">
+          <i data-lucide="layout-grid"></i><span>لوحة التحكم</span>
+        </button>
+
+        <div class="sidebar-section">الأجهزة</div>
+        <button id="nav-btn-devices" onclick="switchView('devices')" class="nav-item-btn">
+          <i data-lucide="monitor-smartphone"></i><span>سجل الأجهزة</span>
+          <span id="nav-badge-devices" class="nav-count">0</span>
+        </button>
+        <button id="nav-btn-add-device" onclick="switchView('add-device')" class="nav-item-btn" data-roles="Admin">
+          <i data-lucide="circle-plus"></i><span>إضافة جهاز</span>
+        </button>
+
+        <div class="sidebar-section">الصيانة</div>
+        <button id="nav-btn-report-fault" onclick="switchView('report-fault')" class="nav-item-btn">
+          <i data-lucide="triangle-alert"></i><span>بلاغ عطل جديد</span>
+        </button>
+        <button id="nav-btn-maintenance-requests" onclick="switchView('maintenance-requests')" class="nav-item-btn" data-roles="Admin,Technician">
+          <i data-lucide="wrench"></i><span>طلبات الصيانة</span>
+          <span id="nav-badge-faults" class="nav-count is-alert">0</span>
+        </button>
+        <button id="nav-btn-track-status" onclick="switchView('track-status')" class="nav-item-btn">
+          <i data-lucide="list-checks"></i><span>متابعة الطلبات</span>
+          <span id="nav-badge-track" class="nav-count is-alert role-hidden" title="طلبات بانتظار تقييمك">0</span>
+        </button>
+        <button id="nav-btn-maintenance-log" onclick="switchView('maintenance-log')" class="nav-item-btn" data-roles="Admin,Technician">
+          <i data-lucide="history"></i><span>سجل الصيانة</span>
+        </button>
+
+        <div data-roles="Admin">
+          <div class="sidebar-section">الإدارة</div>
+          <button id="nav-btn-reports" onclick="switchView('reports')" class="nav-item-btn">
+            <i data-lucide="chart-column"></i><span>التقارير</span>
+          </button>
+          <button id="nav-btn-users" onclick="switchView('users')" class="nav-item-btn">
+            <i data-lucide="users"></i><span>المستخدمون</span>
+          </button>
+        </div>
+      </nav>
+
+      <div class="p-3 border-t border-[var(--line)] space-y-1">
+        <button onclick="resetDemoData()" class="nav-item-btn" data-roles="Admin">
+          <i data-lucide="rotate-ccw"></i><span>استعادة البيانات الافتراضية</span>
+        </button>
+        <button id="nav-btn-login" onclick="switchView('login')" class="nav-item-btn">
+          <i data-lucide="log-out"></i><span>تسجيل الخروج</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- ================================================================
+         MAIN COLUMN
+         ================================================================ -->
+    <div class="flex-1 flex flex-col min-w-0">
+
+      <!-- Top bar -->
+      <header class="app-header h-16 px-4 lg:px-8 flex items-center justify-between gap-3 sticky top-0 z-20 no-print">
+        <div class="flex items-center gap-3 min-w-0">
+          <button onclick="toggleMobileSidebar()" class="btn btn-ghost btn-icon lg:hidden" aria-label="القائمة">
+            <i data-lucide="menu"></i>
+          </button>
+          <div class="flex items-center gap-2 text-[13px] min-w-0">
+            <span class="text-[var(--ink-4)] hidden sm:inline">سند</span>
+            <i data-lucide="chevron-left" class="w-4 h-4 text-[var(--ink-4)] hidden sm:inline"></i>
+            <h1 id="page-header-title" class="font-semibold text-[var(--ink)] truncate">لوحة التحكم</h1>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <label class="hidden md:flex items-center gap-2 text-[12.5px] text-[var(--ink-3)]">
+            <span>عرض كـ</span>
+            <select id="header-role-select" onchange="switchRoleByUserId(this.value)" class="input !h-9 !text-[12.5px] !w-auto max-w-[240px]"></select>
+          </label>
+
+          <div class="flex items-center gap-2.5 ps-3 md:border-s border-[var(--line)]">
+            <div id="current-user-avatar" class="w-9 h-9 rounded-full bg-[var(--brand-50)] text-[var(--brand)] border border-[var(--brand-100)] flex items-center justify-center font-semibold text-[13px]">ع</div>
+            <div class="hidden sm:block leading-tight">
+              <div id="current-user-name" class="text-[13px] font-semibold text-[var(--ink)]">—</div>
+              <div id="current-user-role" class="text-[11.5px] text-[var(--ink-3)]">—</div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main class="flex-1 px-4 py-6 lg:px-8 lg:py-8 max-w-[1280px] w-full mx-auto space-y-6">
+
+        <!-- ================================================================
+             VIEW: LOGIN
+             ================================================================ -->
+        <section id="view-login">
+          <div class="min-h-screen grid grid-cols-1 lg:grid-cols-2 bg-white">
+            <!-- Form side -->
+            <div class="flex flex-col px-6 py-10 sm:px-12 lg:px-20">
+              <div class="flex items-center gap-2.5">
+                <img src="assets/images/sanad_logo_icon.png" alt="سند" class="w-8 h-8 object-contain">
+                <span class="text-[15px] font-bold">سند</span>
+              </div>
+
+              <div class="flex-1 flex items-center">
+                <div class="w-full max-w-sm mx-auto py-12">
+                  <h2 class="text-2xl font-bold text-[var(--ink)]">تسجيل الدخول</h2>
+                  <p class="text-[13.5px] text-[var(--ink-3)] mt-1.5">أدخل بيانات حسابك للوصول إلى لوحة التحكم.</p>
+
+                  <div id="login-pending-note" class="hidden mt-6 flex items-start gap-2.5 p-3 rounded-[8px] bg-[var(--brand-50)] border border-[var(--brand-100)] text-[13px] text-[var(--ink-2)] leading-6"></div>
+
+                  <form onsubmit="handleLoginSubmit(event)" class="space-y-4 mt-8">
+                    <div>
+                      <label class="field-label" for="login-email-input">البريد الإلكتروني</label>
+                      <input id="login-email-input" type="email" value="admin@sanad.tech" dir="ltr" class="input text-right" required>
+                    </div>
+                    <div>
+                      <div class="flex items-center justify-between">
+                        <label class="field-label">كلمة المرور</label>
+                        <a href="#" onclick="return false" class="text-[12.5px] font-medium text-[var(--brand)] hover:underline mb-1.5">نسيت كلمة المرور؟</a>
+                      </div>
+                      <input type="password" value="12345678" class="input" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-full !h-10">دخول</button>
+                  </form>
+
+                  <div class="mt-10">
+                    <div class="flex items-center gap-3 text-[12px] text-[var(--ink-4)]">
+                      <span class="h-px flex-1 bg-[var(--line)]"></span>
+                      <span>حسابات تجريبية</span>
+                      <span class="h-px flex-1 bg-[var(--line)]"></span>
+                    </div>
+                    <div class="mt-4 border border-[var(--line)] rounded-[10px] divide-y divide-[var(--line)] overflow-hidden">
+                      <button onclick="quickDemoLogin(1)" class="w-full flex items-center gap-3 px-4 py-3 text-right hover:bg-[var(--subtle)] transition">
+                        <span class="icon-tile !w-8 !h-8"><i data-lucide="shield-check"></i></span>
+                        <span class="flex-1">
+                          <span class="block text-[13px] font-semibold text-[var(--ink)]">مدير النظام</span>
+                          <span class="block text-[12px] text-[var(--ink-3)]">م. عبدالله المالكي</span>
+                        </span>
+                        <i data-lucide="arrow-left" class="w-4 h-4 text-[var(--ink-4)]"></i>
+                      </button>
+                      <button onclick="quickDemoLogin(2)" class="w-full flex items-center gap-3 px-4 py-3 text-right hover:bg-[var(--subtle)] transition">
+                        <span class="icon-tile !w-8 !h-8"><i data-lucide="wrench"></i></span>
+                        <span class="flex-1">
+                          <span class="block text-[13px] font-semibold text-[var(--ink)]">الدعم الفني</span>
+                          <span class="block text-[12px] text-[var(--ink-3)]">م. فهد العتيبي</span>
+                        </span>
+                        <i data-lucide="arrow-left" class="w-4 h-4 text-[var(--ink-4)]"></i>
+                      </button>
+                      <button onclick="quickDemoLogin(4)" class="w-full flex items-center gap-3 px-4 py-3 text-right hover:bg-[var(--subtle)] transition">
+                        <span class="icon-tile !w-8 !h-8"><i data-lucide="user-round"></i></span>
+                        <span class="flex-1">
+                          <span class="block text-[13px] font-semibold text-[var(--ink)]">موظف</span>
+                          <span class="block text-[12px] text-[var(--ink-3)]">أ. سارة القحطاني</span>
+                        </span>
+                        <i data-lucide="arrow-left" class="w-4 h-4 text-[var(--ink-4)]"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="text-[12px] text-[var(--ink-4)]">© 2026 سند — مشروع تخرج</div>
+            </div>
+
+            <!-- Brand side -->
+            <div class="hidden lg:flex flex-col justify-between bg-[var(--brand-50)] border-r border-[var(--line)] p-16">
+              <div></div>
+              <div class="max-w-md">
+                <img src="assets/images/sanad_logo_full.png" alt="شعار سند" class="w-40 h-auto object-contain mb-10">
+                <p class="text-[22px] font-semibold leading-relaxed text-[var(--ink)]">منصة واحدة لتسجيل الأجهزة، استقبال بلاغات الأعطال، ومتابعة الصيانة حتى الإغلاق.</p>
+                <ul class="mt-8 space-y-4 text-[13.5px] text-[var(--ink-2)]">
+                  <li class="flex items-center gap-3"><i data-lucide="qr-code" class="w-[18px] h-[18px] text-[var(--brand)]"></i>بطاقة تعريف ورمز QR لكل جهاز</li>
+                  <li class="flex items-center gap-3"><i data-lucide="list-checks" class="w-[18px] h-[18px] text-[var(--brand)]"></i>تتبّع حالة الطلب من البلاغ حتى الإغلاق</li>
+                  <li class="flex items-center gap-3"><i data-lucide="repeat" class="w-[18px] h-[18px] text-[var(--brand)]"></i>رصد الأجهزة متكررة الأعطال</li>
+                </ul>
+              </div>
+              <div class="text-[12px] text-[var(--ink-3)]">معك دائماً.. نحو بيئة تقنية أكثر استقراراً</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================================================================
+             VIEW: DASHBOARD
+             ================================================================ -->
+        <section id="view-dashboard" class="hidden space-y-6">
+          <div class="page-head">
+            <div>
+              <h2 id="dash-greeting" class="page-title">مرحباً</h2>
+              <p id="dash-date" class="page-sub">نظرة عامة على حالة الأجهزة وطلبات الصيانة</p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <button onclick="switchView('add-device')" class="btn btn-secondary" data-roles="Admin"><i data-lucide="plus"></i>إضافة جهاز</button>
+              <button onclick="switchView('report-fault')" class="btn btn-primary"><i data-lucide="triangle-alert"></i>بلاغ عطل جديد</button>
+            </div>
+          </div>
+
+          <!-- Pending ratings (reporter) -->
+          <div id="dash-rating-banner" class="hidden card p-4 flex flex-wrap items-center justify-between gap-3"></div>
+
+          <!-- KPI -->
+          <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
+            <button onclick="switchView('devices')" class="stat">
+              <div class="stat-label"><span>إجمالي الأجهزة</span><i data-lucide="monitor"></i></div>
+              <div id="kpi-total-devices" class="stat-value">0</div>
+              <div class="stat-foot">مسجّلة في النظام</div>
+            </button>
+            <button onclick="switchView('devices')" class="stat">
+              <div class="stat-label"><span>تعمل بكفاءة</span><i data-lucide="circle-check"></i></div>
+              <div id="kpi-active-devices" class="stat-value">0</div>
+              <div class="stat-foot"><span class="dot bg-[var(--ok)]"></span>جاهزة للخدمة</div>
+            </button>
+            <button onclick="switchView('maintenance-requests')" class="stat">
+              <div class="stat-label"><span>بلاغات مفتوحة</span><i data-lucide="inbox"></i></div>
+              <div id="kpi-open-faults" class="stat-value">0</div>
+              <div class="stat-foot"><span class="dot bg-[#dc6803]"></span>بانتظار الإغلاق</div>
+            </button>
+            <button onclick="switchView('maintenance-requests')" class="stat">
+              <div class="stat-label"><span>قيد المعالجة</span><i data-lucide="loader"></i></div>
+              <div id="kpi-inprogress-faults" class="stat-value">0</div>
+              <div class="stat-foot"><span class="dot bg-[var(--info)]"></span>لدى الدعم الفني</div>
+            </button>
+            <button onclick="switchView('maintenance-log')" class="stat">
+              <div class="stat-label"><span>صيانات منجزة</span><i data-lucide="clipboard-check"></i></div>
+              <div id="kpi-completed-maint" class="stat-value">0</div>
+              <div class="stat-foot">موثّقة في السجل</div>
+            </button>
+            <button onclick="switchView('maintenance-log')" class="stat">
+              <div class="stat-label"><span>متكررة الأعطال</span><i data-lucide="repeat"></i></div>
+              <div id="kpi-repeat-devices" class="stat-value">0</div>
+              <div class="stat-foot"><span class="dot bg-[var(--bad)]"></span>تحتاج صيانة وقائية</div>
+            </button>
+          </div>
+
+          <!-- Service performance (SLA + ratings) -->
+          <div class="card" data-roles="Admin,Technician">
+            <div class="card-header">
+              <div>
+                <div class="card-title">أداء الخدمة</div>
+                <div class="card-sub">الالتزام بمهلة الاستجابة: حرجة 4 ساعات · عالية 24 ساعة · متوسطة 3 أيام · منخفضة 5 أيام</div>
+              </div>
+              <button onclick="switchView('maintenance-requests'); filterMaintenanceRequests('OVERDUE')" class="btn btn-ghost btn-sm">الطلبات المتأخرة<i data-lucide="arrow-left"></i></button>
+            </div>
+            <div class="grid grid-cols-2 lg:grid-cols-4 divide-x divide-x-reverse divide-[var(--line)]">
+              <div class="p-5">
+                <div class="text-[12.5px] text-[var(--ink-3)]">الالتزام بالمهلة</div>
+                <div id="svc-compliance" class="stat-value">—</div>
+                <div id="svc-compliance-sub" class="text-[12px] text-[var(--ink-4)] mt-1">—</div>
+              </div>
+              <div class="p-5">
+                <div class="text-[12.5px] text-[var(--ink-3)]">متوسط زمن الإغلاق</div>
+                <div id="svc-avg-time" class="stat-value">—</div>
+                <div class="text-[12px] text-[var(--ink-4)] mt-1">من البلاغ حتى الإغلاق</div>
+              </div>
+              <div class="p-5 border-t lg:border-t-0 border-[var(--line)]">
+                <div class="text-[12.5px] text-[var(--ink-3)]">طلبات متأخرة</div>
+                <div id="svc-overdue" class="stat-value">0</div>
+                <div id="svc-overdue-sub" class="text-[12px] text-[var(--ink-4)] mt-1">—</div>
+              </div>
+              <div class="p-5 border-t lg:border-t-0 border-[var(--line)]">
+                <div class="text-[12.5px] text-[var(--ink-3)]">رضا المستخدمين</div>
+                <div id="svc-rating" class="stat-value">—</div>
+                <div id="svc-rating-stars" class="flex items-center mt-1.5"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Charts -->
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div class="card lg:col-span-5">
+              <div class="card-header">
+                <div>
+                  <div class="card-title">حالة الأجهزة</div>
+                  <div class="card-sub">التوزيع الحالي حسب الحالة التشغيلية</div>
+                </div>
+              </div>
+              <div class="card-body"><div class="relative h-64"><canvas id="chart-device-status"></canvas></div></div>
+            </div>
+            <div class="card lg:col-span-7">
+              <div class="card-header">
+                <div>
+                  <div class="card-title">الأجهزة والأعطال حسب الفئة</div>
+                  <div class="card-sub">عدد الأجهزة المسجلة مقابل البلاغات لكل نوع</div>
+                </div>
+              </div>
+              <div class="card-body"><div class="relative h-64"><canvas id="chart-device-types"></canvas></div></div>
+            </div>
+          </div>
+
+          <!-- Recent faults + workflow -->
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div class="card lg:col-span-8 overflow-hidden">
+              <div class="card-header">
+                <div>
+                  <div class="card-title">أحدث البلاغات</div>
+                  <div class="card-sub">آخر خمسة بلاغات أعطال مسجّلة</div>
+                </div>
+                <button onclick="switchView('maintenance-requests')" class="btn btn-ghost btn-sm">عرض الكل<i data-lucide="arrow-left"></i></button>
+              </div>
+              <div class="overflow-x-auto">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>رقم البلاغ</th>
+                      <th>الجهاز</th>
+                      <th>المبلّغ</th>
+                      <th>الأولوية</th>
+                      <th>الحالة</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody id="dashboard-recent-faults-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="card lg:col-span-4">
+              <div class="card-header">
+                <div>
+                  <div class="card-title">دورة البلاغ</div>
+                  <div class="card-sub">المراحل التي يمر بها كل طلب صيانة</div>
+                </div>
+              </div>
+              <div class="card-body">
+                <ol class="timeline">
+                  <li class="tl-step is-done">
+                    <span class="tl-icon"><i data-lucide="send"></i></span>
+                    <button onclick="switchView('report-fault')" class="text-right group">
+                      <div class="text-[13.5px] font-semibold text-[var(--ink)] group-hover:text-[var(--brand)]">الموظف يرفع البلاغ</div>
+                      <div class="text-[12.5px] text-[var(--ink-3)]">برمز الجهاز أو بمسح رمز QR</div>
+                    </button>
+                  </li>
+                  <li class="tl-step is-done">
+                    <span class="tl-icon"><i data-lucide="wrench"></i></span>
+                    <button onclick="switchView('maintenance-requests')" class="text-right group">
+                      <div class="text-[13.5px] font-semibold text-[var(--ink)] group-hover:text-[var(--brand)]">الفني يعالج ويوثّق</div>
+                      <div class="text-[12.5px] text-[var(--ink-3)]">فحص الجهاز وتسجيل الإجراء</div>
+                    </button>
+                  </li>
+                  <li class="tl-step is-done">
+                    <span class="tl-icon"><i data-lucide="check"></i></span>
+                    <button onclick="switchView('track-status')" class="text-right group">
+                      <div class="text-[13.5px] font-semibold text-[var(--ink)] group-hover:text-[var(--brand)]">إغلاق الطلب</div>
+                      <div class="text-[12.5px] text-[var(--ink-3)]">إعادة الجهاز إلى الخدمة</div>
+                    </button>
+                  </li>
+                  <li class="tl-step">
+                    <span class="tl-icon"><i data-lucide="chart-column"></i></span>
+                    <button onclick="switchView('reports')" class="text-right group">
+                      <div class="text-[13.5px] font-semibold text-[var(--ink)] group-hover:text-[var(--brand)]">المتابعة والتقارير</div>
+                      <div class="text-[12.5px] text-[var(--ink-3)]">إحصائيات ورصد تكرار الأعطال</div>
+                    </button>
+                  </li>
+                </ol>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================================================================
+             VIEW: DEVICES
+             ================================================================ -->
+        <section id="view-devices" class="hidden space-y-6">
+          <div class="page-head">
+            <div>
+              <h2 class="page-title">سجل الأجهزة</h2>
+              <p class="page-sub">جميع الأجهزة التقنية المسجّلة مع حالتها وموقعها وسجل أعطالها.</p>
+            </div>
+            <button onclick="switchView('add-device')" class="btn btn-primary" data-roles="Admin"><i data-lucide="plus"></i>إضافة جهاز</button>
+          </div>
+
+          <div class="card overflow-hidden">
+            <div class="p-4 flex flex-col md:flex-row md:items-center gap-3 border-b border-[var(--line)]">
+              <div class="input-icon flex-1">
+                <i data-lucide="search"></i>
+                <input id="device-search-input" oninput="renderDevicesTable()" type="text" placeholder="ابحث بالاسم أو الرمز أو الرقم التسلسلي أو الموقع" class="input">
+              </div>
+              <select id="device-filter-type" onchange="renderDevicesTable()" class="input md:!w-44">
+                <option value="ALL">كل الأنواع</option>
+                <option value="كمبيوتر مكتبي">كمبيوتر مكتبي</option>
+                <option value="لابتوب">لابتوب</option>
+                <option value="طابعة">طابعة</option>
+                <option value="شاشة">شاشة</option>
+                <option value="خادم (Server)">خادم</option>
+                <option value="أجهزة شبكات">أجهزة شبكات</option>
+              </select>
+              <select id="device-filter-status" onchange="renderDevicesTable()" class="input md:!w-44">
+                <option value="ALL">كل الحالات</option>
+                <option value="يعمل بكفاءة">يعمل بكفاءة</option>
+                <option value="تحت الصيانة">تحت الصيانة</option>
+                <option value="معطل">معطل</option>
+                <option value="خارج الخدمة">خارج الخدمة</option>
+              </select>
+              <span id="devices-filtered-count" class="text-[12.5px] text-[var(--ink-3)] whitespace-nowrap md:ps-2">—</span>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>الرمز / الرقم التسلسلي</th>
+                    <th>الجهاز</th>
+                    <th>الحالة</th>
+                    <th>الموقع</th>
+                    <th>الشراء / الأعطال</th>
+                    <th class="text-left">إجراءات</th>
+                  </tr>
+                </thead>
+                <tbody id="devices-table-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================================================================
+             VIEW: ADD DEVICE
+             ================================================================ -->
+        <section id="view-add-device" class="hidden space-y-6">
+          <div class="page-head">
+            <div>
+              <h2 class="page-title">إضافة جهاز</h2>
+              <p class="page-sub">يحصل كل جهاز على رمز خاص وبطاقة QR لتسهيل الإبلاغ عن الأعطال.</p>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <div class="card lg:col-span-8">
+              <div class="card-header">
+                <div class="card-title">بيانات الجهاز</div>
+                <button type="button" onclick="generateRandomDeviceCode()" class="btn btn-secondary btn-sm"><i data-lucide="refresh-cw"></i>توليد رمز</button>
+              </div>
+              <form id="form-add-device" onsubmit="handleAddDeviceSubmit(event)">
+                <div class="card-body grid grid-cols-1 md:grid-cols-2 gap-x-5 gap-y-4">
+                  <div>
+                    <label class="field-label">رمز الجهاز<span class="req">*</span></label>
+                    <input id="new-dev-id" oninput="updateNewDevicePreview()" type="text" value="SND-PC-109" dir="ltr" class="input font-mono text-right" required>
+                  </div>
+                  <div>
+                    <label class="field-label">الاسم والموديل<span class="req">*</span></label>
+                    <input id="new-dev-name" oninput="updateNewDevicePreview()" type="text" placeholder="HP EliteBook 840 G10" class="input" required>
+                  </div>
+                  <div>
+                    <label class="field-label">نوع الجهاز<span class="req">*</span></label>
+                    <select id="new-dev-type" onchange="updateNewDevicePreview()" class="input">
+                      <option value="كمبيوتر مكتبي">كمبيوتر مكتبي</option>
+                      <option value="لابتوب">لابتوب</option>
+                      <option value="طابعة">طابعة</option>
+                      <option value="شاشة">شاشة</option>
+                      <option value="خادم (Server)">خادم</option>
+                      <option value="أجهزة شبكات">أجهزة شبكات</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="field-label">الرقم التسلسلي<span class="req">*</span></label>
+                    <input id="new-dev-serial" oninput="updateNewDevicePreview()" type="text" value="SN-SND-84920" dir="ltr" class="input font-mono text-right" required>
+                  </div>
+                  <div>
+                    <label class="field-label">الحالة</label>
+                    <select id="new-dev-status" class="input">
+                      <option value="يعمل بكفاءة">يعمل بكفاءة</option>
+                      <option value="تحت الصيانة">تحت الصيانة</option>
+                      <option value="معطل">معطل</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="field-label">تاريخ الشراء<span class="req">*</span></label>
+                    <input id="new-dev-date" type="date" value="2026-10-20" class="input" required>
+                  </div>
+                  <div class="md:col-span-2">
+                    <label class="field-label">الموقع<span class="req">*</span></label>
+                    <input id="new-dev-location" oninput="updateNewDevicePreview()" type="text" placeholder="قسم تقنية المعلومات — مكتب 305" class="input" required>
+                  </div>
+                  <div class="md:col-span-2">
+                    <label class="field-label">المواصفات الفنية</label>
+                    <input id="new-dev-specs" type="text" placeholder="Core i7, 16GB RAM, 512GB SSD" class="input">
+                    <p class="field-hint">اختياري — المعالج والذاكرة والتخزين أو أي تفاصيل مفيدة للفني.</p>
+                  </div>
+                </div>
+                <div class="px-5 py-4 border-t border-[var(--line)] bg-[var(--subtle)] rounded-b-[10px] flex justify-end gap-2">
+                  <button type="button" onclick="switchView('devices')" class="btn btn-secondary">إلغاء</button>
+                  <button type="submit" class="btn btn-primary">حفظ الجهاز</button>
+                </div>
+              </form>
+            </div>
+
+            <!-- Asset tag preview -->
+            <div class="lg:col-span-4 space-y-3 lg:sticky lg:top-24">
+              <div class="text-[13px] font-semibold text-[var(--ink-2)]">معاينة البطاقة</div>
+              <div class="card p-5">
+                <div class="flex items-center justify-between pb-4 border-b border-dashed border-[var(--line-strong)]">
+                  <div class="flex items-center gap-2">
+                    <img src="assets/images/sanad_logo_icon.png" alt="سند" class="w-6 h-6 object-contain">
+                    <span class="text-[13px] font-bold">سند</span>
+                  </div>
+                  <span id="preview-tag-id" class="id-chip">SND-PC-109</span>
+                </div>
+                <div class="flex items-center gap-4 pt-4">
+                  <div id="preview-tag-qr" class="flex-shrink-0"></div>
+                  <div class="min-w-0 space-y-1">
+                    <div id="preview-tag-name" class="text-[14px] font-semibold text-[var(--ink)] break-words">اسم وموديل الجهاز</div>
+                    <div id="preview-tag-type" class="text-[12.5px] text-[var(--ink-3)]">كمبيوتر مكتبي</div>
+                    <div id="preview-tag-serial" class="text-[12px] font-mono text-[var(--ink-3)]" dir="ltr" style="text-align:right">SN-XXXX-2026</div>
+                    <div id="preview-tag-loc" class="text-[12px] text-[var(--ink-3)]">القسم / المكتب</div>
+                  </div>
+                </div>
+              </div>
+              <p class="text-[12.5px] text-[var(--ink-3)] leading-relaxed">تُلصق البطاقة على الجهاز، ويستطيع أي موظف مسح الرمز لرفع بلاغ مرتبط بالجهاز مباشرة.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================================================================
+             VIEW: REPORT FAULT
+             ================================================================ -->
+        <section id="view-report-fault" class="hidden">
+          <div class="max-w-3xl mx-auto space-y-6">
+            <div class="page-head">
+              <div>
+                <h2 class="page-title">بلاغ عطل جديد</h2>
+                <p class="page-sub">اختر الجهاز وصف المشكلة، وسيُحال البلاغ إلى فريق الدعم الفني مباشرة.</p>
+              </div>
+            </div>
+
+            <form onsubmit="handleReportFaultSubmit(event)" class="card">
+              <div class="card-body space-y-5">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-5 gap-y-4">
+                  <div class="md:col-span-2">
+                    <label class="field-label">الجهاز<span class="req">*</span></label>
+                    <select id="fault-device-select" class="input" required></select>
+                  </div>
+                  <div class="md:col-span-2">
+                    <label class="field-label">المبلّغ<span class="req">*</span></label>
+                    <select id="fault-user-select" class="input" required></select>
+                  </div>
+                  <div>
+                    <label class="field-label">نوع العطل<span class="req">*</span></label>
+                    <select id="fault-category-select" class="input">
+                      <option value="عطل عتاد (Hardware)">عطل في العتاد</option>
+                      <option value="عطل نظام التشغيل والبرمجيات">نظام التشغيل والبرمجيات</option>
+                      <option value="عطل طابعة / سحب ورق / أحبار">طابعة / سحب ورق / أحبار</option>
+                      <option value="مشكلة اتصال بالشبكة والإنترنت">الاتصال بالشبكة والإنترنت</option>
+                      <option value="انطفاء مفاجئ / حرارة مرتفعة">انطفاء مفاجئ / حرارة مرتفعة</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="field-label">الأولوية<span class="req">*</span></label>
+                    <select id="fault-priority-select" onchange="updateFaultSlaHint()" class="input">
+                      <option value="منخفضة">منخفضة — تحسين أو تنبيه</option>
+                      <option value="متوسطة" selected>متوسطة — يؤثر جزئياً على العمل</option>
+                      <option value="عالية">عالية — الجهاز متوقف</option>
+                      <option value="حرجة">حرجة — يؤثر على قسم كامل</option>
+                    </select>
+                    <p id="fault-sla-hint" class="field-hint flex items-center gap-1"></p>
+                  </div>
+                </div>
+                <div>
+                  <label class="field-label">وصف المشكلة<span class="req">*</span></label>
+                  <textarea id="fault-desc-input" rows="5" placeholder="ماذا يحدث؟ هل تظهر رسالة خطأ؟ ومتى بدأت المشكلة؟" class="input" required></textarea>
+                </div>
+              </div>
+              <div class="px-5 py-4 border-t border-[var(--line)] bg-[var(--subtle)] rounded-b-[10px] flex justify-end gap-2">
+                <button type="button" onclick="switchView('dashboard')" class="btn btn-secondary">إلغاء</button>
+                <button type="submit" class="btn btn-primary"><i data-lucide="send"></i>إرسال البلاغ</button>
+              </div>
+            </form>
+          </div>
+        </section>
+
+        <!-- ================================================================
+             VIEW: MAINTENANCE REQUESTS
+             ================================================================ -->
+        <section id="view-maintenance-requests" class="hidden space-y-6">
+          <div class="page-head">
+            <div>
+              <h2 class="page-title">طلبات الصيانة</h2>
+              <p class="page-sub">تحديث حالة الطلبات وتوثيق الإجراءات المنفّذة وإغلاق البلاغات.</p>
+            </div>
+          </div>
+
+          <div class="card overflow-hidden">
+            <div class="p-4 border-b border-[var(--line)] overflow-x-auto">
+              <div class="segmented">
+                <button id="maint-filter-ALL" onclick="filterMaintenanceRequests('ALL')" class="seg-btn is-active">الكل</button>
+                <button id="maint-filter-جديد" onclick="filterMaintenanceRequests('جديد')" class="seg-btn">جديد</button>
+                <button id="maint-filter-قيد المعالجة" onclick="filterMaintenanceRequests('قيد المعالجة')" class="seg-btn">قيد المعالجة</button>
+                <button id="maint-filter-مغلق" onclick="filterMaintenanceRequests('مغلق')" class="seg-btn">مغلق</button>
+                <button id="maint-filter-OVERDUE" onclick="filterMaintenanceRequests('OVERDUE')" class="seg-btn inline-flex items-center gap-1.5">متأخرة<span id="maint-overdue-count" class="nav-count !h-[18px] !min-w-[18px] !text-[10.5px] !bg-[var(--bad-bg)] !text-[var(--bad)] !border-[var(--bad-line)]">0</span></button>
+              </div>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>رقم الطلب</th>
+                    <th>الجهاز</th>
+                    <th>العطل</th>
+                    <th>المبلّغ</th>
+                    <th>الفني</th>
+                    <th>الأولوية</th>
+                    <th>الحالة / المهلة</th>
+                    <th class="text-left">إجراءات</th>
+                  </tr>
+                </thead>
+                <tbody id="maintenance-requests-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================================================================
+             VIEW: TRACK STATUS
+             ================================================================ -->
+        <section id="view-track-status" class="hidden space-y-6">
+          <div class="page-head">
+            <div>
+              <h2 class="page-title">متابعة الطلبات</h2>
+              <p class="page-sub">اختر بلاغاً لعرض مرحلته الحالية والإجراءات المنفّذة عليه.</p>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <div class="lg:col-span-4 space-y-3">
+              <div class="input-icon">
+                <i data-lucide="search"></i>
+                <input id="track-search-input" oninput="renderTrackStatusPage()" type="text" placeholder="رقم البلاغ أو رمز الجهاز" class="input">
+              </div>
+              <div id="track-tickets-list" class="space-y-2 max-h-[640px] overflow-y-auto pe-1"></div>
+            </div>
+            <div id="track-ticket-detail-box" class="card lg:col-span-8"></div>
+          </div>
+        </section>
+
+        <!-- ================================================================
+             VIEW: MAINTENANCE LOG
+             ================================================================ -->
+        <section id="view-maintenance-log" class="hidden space-y-6">
+          <div class="page-head">
+            <div>
+              <h2 class="page-title">سجل الصيانة</h2>
+              <p class="page-sub">كل عمليات الإصلاح وقطع الغيار المستبدلة وملاحظات الفنيين.</p>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div class="flex items-center gap-3">
+                <span class="icon-tile !bg-[var(--bad-bg)] !text-[var(--bad)]"><i data-lucide="repeat"></i></span>
+                <div>
+                  <div class="card-title">أجهزة متكررة الأعطال</div>
+                  <div class="card-sub">أجهزة سُجّل عليها عطلان أو أكثر — مرشّحة للصيانة الوقائية أو الاستبدال</div>
+                </div>
+              </div>
+            </div>
+            <div id="repeat-fault-devices-grid" class="card-body grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+          </div>
+
+          <div class="card overflow-hidden">
+            <div class="card-header flex-wrap">
+              <div class="card-title">السجل الكامل</div>
+              <div class="input-icon w-full sm:w-72">
+                <i data-lucide="search"></i>
+                <input id="maint-log-search" oninput="renderMaintenanceLogPage()" type="text" placeholder="بحث في السجل" class="input !h-9">
+              </div>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>رقم الصيانة</th>
+                    <th>البلاغ</th>
+                    <th>الجهاز</th>
+                    <th>الفني</th>
+                    <th>التاريخ</th>
+                    <th>الإجراء المتخذ</th>
+                    <th>قطع الغيار</th>
+                    <th>ملاحظات</th>
+                  </tr>
+                </thead>
+                <tbody id="maintenance-log-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================================================================
+             VIEW: REPORTS
+             ================================================================ -->
+        <section id="view-reports" class="hidden space-y-6">
+          <div class="page-head">
+            <div>
+              <h2 class="page-title">التقارير</h2>
+              <p class="page-sub">مؤشرات الأداء، بنية قاعدة البيانات، واستعراض الجداول.</p>
+            </div>
+            <div class="flex gap-2 no-print">
+              <button onclick="exportReportCsv()" class="btn btn-secondary"><i data-lucide="download"></i>تصدير CSV</button>
+              <button onclick="window.print()" class="btn btn-primary"><i data-lucide="printer"></i>طباعة</button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div class="card lg:col-span-5">
+              <div class="card-header">
+                <div>
+                  <div class="card-title">حالة البلاغات</div>
+                  <div class="card-sub">نسبة البلاغات المغلقة مقارنة بالمفتوحة</div>
+                </div>
+              </div>
+              <div class="card-body"><div class="relative h-64"><canvas id="chart-reports-faults"></canvas></div></div>
+            </div>
+
+            <div class="card lg:col-span-7">
+              <div class="card-header">
+                <div>
+                  <div class="card-title">بنية قاعدة البيانات</div>
+                  <div class="card-sub">أربعة جداول مترابطة بمفاتيح أجنبية</div>
+                </div>
+                <i data-lucide="database" class="w-[18px] h-[18px] text-[var(--ink-4)]"></i>
+              </div>
+              <div class="card-body grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div class="p-4 rounded-[8px] border border-[var(--line)]">
+                  <div class="flex items-center gap-2 text-[13px] font-semibold text-[var(--ink)]"><i data-lucide="users" class="w-4 h-4 text-[var(--ink-3)]"></i>Users</div>
+                  <div class="font-mono text-[11.5px] text-[var(--ink-3)] mt-2 leading-relaxed" dir="ltr" style="text-align:right">User_ID, Name, Email, Password, Role</div>
+                  <div class="text-[12px] text-[var(--ink-3)] mt-2">مرتبط بالأعطال (1:N) والصيانة (1:N)</div>
+                </div>
+                <div class="p-4 rounded-[8px] border border-[var(--line)]">
+                  <div class="flex items-center gap-2 text-[13px] font-semibold text-[var(--ink)]"><i data-lucide="monitor" class="w-4 h-4 text-[var(--ink-3)]"></i>Devices</div>
+                  <div class="font-mono text-[11.5px] text-[var(--ink-3)] mt-2 leading-relaxed" dir="ltr" style="text-align:right">Device_ID, Device_Name, Device_Type, Serial_Number, Status, Location, Purchase_Date</div>
+                  <div class="text-[12px] text-[var(--ink-3)] mt-2">للجهاز عدة أعطال (1:N)</div>
+                </div>
+                <div class="p-4 rounded-[8px] border border-[var(--line)]">
+                  <div class="flex items-center gap-2 text-[13px] font-semibold text-[var(--ink)]"><i data-lucide="triangle-alert" class="w-4 h-4 text-[var(--ink-3)]"></i>Faults</div>
+                  <div class="font-mono text-[11.5px] text-[var(--ink-3)] mt-2 leading-relaxed" dir="ltr" style="text-align:right">Fault_ID, Device_ID, User_ID, Fault_Description, Report_Date, Status</div>
+                  <div class="text-[12px] text-[var(--ink-3)] mt-2">يربط المبلّغ بالجهاز ويتتبّع الحالة</div>
+                </div>
+                <div class="p-4 rounded-[8px] border border-[var(--line)]">
+                  <div class="flex items-center gap-2 text-[13px] font-semibold text-[var(--ink)]"><i data-lucide="wrench" class="w-4 h-4 text-[var(--ink-3)]"></i>Maintenance</div>
+                  <div class="font-mono text-[11.5px] text-[var(--ink-3)] mt-2 leading-relaxed" dir="ltr" style="text-align:right">Maintenance_ID, Fault_ID, Technician_ID, Maintenance_Date, Action_Taken, Notes</div>
+                  <div class="text-[12px] text-[var(--ink-3)] mt-2">يوثّق الإجراء المنفّذ لكل عطل</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Technician performance (SLA + ratings) -->
+          <div class="card overflow-hidden">
+            <div class="card-header">
+              <div>
+                <div class="card-title">أداء فريق الدعم الفني</div>
+                <div class="card-sub">الالتزام بمهلة الاستجابة ومتوسط زمن الإغلاق وتقييم المستخدمين لكل فني</div>
+              </div>
+              <i data-lucide="gauge" class="w-[18px] h-[18px] text-[var(--ink-4)]"></i>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>الفني</th>
+                    <th>مغلقة</th>
+                    <th>مفتوحة</th>
+                    <th>الالتزام بالمهلة</th>
+                    <th>متوسط زمن الإغلاق</th>
+                    <th>التقييم</th>
+                  </tr>
+                </thead>
+                <tbody id="tech-performance-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card overflow-hidden">
+            <div class="card-header flex-wrap">
+              <div>
+                <div class="card-title">استعراض الجداول</div>
+                <div class="card-sub">البيانات الحالية كما هي مخزّنة</div>
+              </div>
+              <div class="segmented">
+                <button id="db-tab-Devices" onclick="switchDatabaseTab('Devices')" class="seg-btn is-active">Devices</button>
+                <button id="db-tab-Faults" onclick="switchDatabaseTab('Faults')" class="seg-btn">Faults</button>
+                <button id="db-tab-Maintenance" onclick="switchDatabaseTab('Maintenance')" class="seg-btn">Maintenance</button>
+                <button id="db-tab-Users" onclick="switchDatabaseTab('Users')" class="seg-btn">Users</button>
+              </div>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="data-table">
+                <thead id="db-explorer-thead"></thead>
+                <tbody id="db-explorer-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================================================================
+             VIEW: USERS
+             ================================================================ -->
+        <section id="view-users" class="hidden space-y-6">
+          <div class="page-head">
+            <div>
+              <h2 class="page-title">المستخدمون</h2>
+              <p class="page-sub">الحسابات المسجّلة وصلاحياتها. يمكنك التبديل إلى أي حساب لمعاينة النظام بصلاحياته.</p>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <div class="card lg:col-span-8 overflow-hidden">
+              <div class="overflow-x-auto">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>المستخدم</th>
+                      <th>القسم</th>
+                      <th>الدور</th>
+                      <th class="text-left"></th>
+                    </tr>
+                  </thead>
+                  <tbody id="users-table-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="card lg:col-span-4">
+              <div class="card-header"><div class="card-title">مستخدم جديد</div></div>
+              <form id="form-add-user" onsubmit="handleAddUserSubmit(event)">
+                <div class="card-body space-y-4">
+                  <div>
+                    <label class="field-label">الاسم<span class="req">*</span></label>
+                    <input id="new-user-name" type="text" placeholder="م. خالد الحربي" class="input" required>
+                  </div>
+                  <div>
+                    <label class="field-label">البريد الإلكتروني<span class="req">*</span></label>
+                    <input id="new-user-email" type="email" placeholder="khalid@sanad.tech" dir="ltr" class="input text-right" required>
+                  </div>
+                  <div>
+                    <label class="field-label">الدور<span class="req">*</span></label>
+                    <select id="new-user-role" class="input">
+                      <option value="User">موظف</option>
+                      <option value="Technician">دعم فني</option>
+                      <option value="Admin">مدير النظام</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="field-label">القسم</label>
+                    <input id="new-user-dept" type="text" placeholder="العلاقات العامة" class="input">
+                  </div>
+                </div>
+                <div class="px-5 py-4 border-t border-[var(--line)] bg-[var(--subtle)] rounded-b-[10px]">
+                  <button type="submit" class="btn btn-primary w-full"><i data-lucide="user-plus"></i>إضافة المستخدم</button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <!-- Permissions matrix -->
+          <div class="card overflow-hidden">
+            <div class="card-header">
+              <div>
+                <div class="card-title">الصلاحيات حسب الدور</div>
+                <div class="card-sub">ما يستطيع كل دور القيام به داخل النظام</div>
+              </div>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>الصلاحية</th>
+                    <th class="text-center w-28">موظف</th>
+                    <th class="text-center w-28">دعم فني</th>
+                    <th class="text-center w-28">مدير النظام</th>
+                  </tr>
+                </thead>
+                <tbody id="permissions-matrix-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- ====================================================================
+       MODAL: PROCESS TICKET
+       ==================================================================== -->
+  <div id="modal-process-ticket" class="hidden fixed inset-0 modal-backdrop z-50 flex items-center justify-center p-4">
+    <div class="modal-panel max-w-lg">
+      <div class="modal-head">
+        <div>
+          <h3 id="modal-ticket-title" class="text-[16px] font-semibold text-[var(--ink)]">معالجة طلب الصيانة</h3>
+          <p class="text-[12.5px] text-[var(--ink-3)] mt-1">حدّث الحالة ووثّق ما تم تنفيذه.</p>
+        </div>
+        <button onclick="closeProcessTicketModal()" class="btn btn-ghost btn-icon" aria-label="إغلاق"><i data-lucide="x"></i></button>
+      </div>
+      <form onsubmit="handleProcessTicketSubmit(event)">
+        <div class="modal-body space-y-4">
+          <input id="modal-ticket-fault-id" type="hidden">
+          <div class="p-3 rounded-[8px] bg-[var(--subtle)] border border-[var(--line)]">
+            <div class="text-[12px] text-[var(--ink-3)] mb-1">وصف المشكلة</div>
+            <div id="modal-ticket-desc" class="text-[13px] text-[var(--ink-2)] leading-relaxed"></div>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="field-label">الحالة<span class="req">*</span></label>
+              <select id="modal-ticket-status" class="input">
+                <option value="جديد">جديد</option>
+                <option value="قيد المعالجة">قيد المعالجة</option>
+                <option value="مغلق">مغلق — تم الحل</option>
+              </select>
+            </div>
+            <div>
+              <label class="field-label">الفني<span class="req">*</span></label>
+              <select id="modal-ticket-tech" class="input"></select>
+            </div>
+          </div>
+          <div>
+            <label class="field-label">الإجراء المتخذ<span class="req">*</span></label>
+            <textarea id="modal-ticket-action" rows="3" placeholder="ما الذي تم تنفيذه لإصلاح العطل؟" class="input" required></textarea>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="field-label">قطع الغيار</label>
+              <input id="modal-ticket-parts" type="text" value="لا يوجد" class="input">
+            </div>
+            <div>
+              <label class="field-label">التكلفة (ر.س)</label>
+              <input id="modal-ticket-cost" type="number" value="0" min="0" class="input num">
+            </div>
+          </div>
+          <div>
+            <label class="field-label">ملاحظات</label>
+            <input id="modal-ticket-notes" type="text" placeholder="توصيات وقائية تخص الجهاز" class="input">
+          </div>
+        </div>
+        <div class="modal-foot">
+          <button type="button" onclick="closeProcessTicketModal()" class="btn btn-secondary">إلغاء</button>
+          <button type="submit" class="btn btn-primary">حفظ</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ====================================================================
+       MODAL: DEVICE QR
+       ==================================================================== -->
+  <div id="modal-device-qr" class="hidden fixed inset-0 modal-backdrop z-50 flex items-center justify-center p-4">
+    <div class="modal-panel max-w-md">
+      <div class="modal-head">
+        <h3 class="text-[16px] font-semibold text-[var(--ink)]">بطاقة الجهاز</h3>
+        <button onclick="closeDeviceQrModal()" class="btn btn-ghost btn-icon" aria-label="إغلاق"><i data-lucide="x"></i></button>
+      </div>
+      <div id="modal-device-qr-body" class="modal-body"></div>
+      <div class="modal-foot">
+        <button onclick="closeDeviceQrModal()" class="btn btn-secondary">إغلاق</button>
+        <button onclick="window.print()" class="btn btn-primary"><i data-lucide="printer"></i>طباعة الملصق</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====================================================================
+       MODAL: EDIT DEVICE
+       ==================================================================== -->
+  <div id="modal-edit-device" class="hidden fixed inset-0 modal-backdrop z-50 flex items-center justify-center p-4">
+    <div class="modal-panel max-w-md">
+      <div class="modal-head">
+        <h3 class="text-[16px] font-semibold text-[var(--ink)]">تعديل الجهاز</h3>
+        <button onclick="closeEditDeviceModal()" class="btn btn-ghost btn-icon" aria-label="إغلاق"><i data-lucide="x"></i></button>
+      </div>
+      <form onsubmit="handleEditDeviceSubmit(event)">
+        <div class="modal-body space-y-4">
+          <div>
+            <label class="field-label">رمز الجهاز</label>
+            <input id="edit-dev-id" type="text" readonly dir="ltr" class="input font-mono text-right">
+          </div>
+          <div>
+            <label class="field-label">الاسم</label>
+            <input id="edit-dev-name" type="text" class="input" required>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="field-label">النوع</label>
+              <select id="edit-dev-type" class="input">
+                <option value="كمبيوتر مكتبي">كمبيوتر مكتبي</option>
+                <option value="لابتوب">لابتوب</option>
+                <option value="طابعة">طابعة</option>
+                <option value="شاشة">شاشة</option>
+                <option value="خادم (Server)">خادم</option>
+                <option value="أجهزة شبكات">أجهزة شبكات</option>
+              </select>
+            </div>
+            <div>
+              <label class="field-label">الحالة</label>
+              <select id="edit-dev-status" class="input">
+                <option value="يعمل بكفاءة">يعمل بكفاءة</option>
+                <option value="تحت الصيانة">تحت الصيانة</option>
+                <option value="معطل">معطل</option>
+                <option value="خارج الخدمة">خارج الخدمة</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label class="field-label">الموقع</label>
+            <input id="edit-dev-location" type="text" class="input" required>
+          </div>
+        </div>
+        <div class="modal-foot">
+          <button type="button" onclick="closeEditDeviceModal()" class="btn btn-secondary">إلغاء</button>
+          <button type="submit" class="btn btn-primary">حفظ التعديلات</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ====================================================================
+       MODAL: DELETE DEVICE
+       ==================================================================== -->
+  <div id="modal-delete-device" class="hidden fixed inset-0 modal-backdrop z-50 flex items-center justify-center p-4">
+    <div class="modal-panel max-w-sm">
+      <div class="modal-body">
+        <div class="w-10 h-10 rounded-full bg-[var(--bad-bg)] text-[var(--bad)] flex items-center justify-center mb-4">
+          <i data-lucide="trash-2" class="w-5 h-5"></i>
+        </div>
+        <h3 class="text-[16px] font-semibold text-[var(--ink)]">حذف الجهاز</h3>
+        <p class="text-[13px] text-[var(--ink-3)] mt-2 leading-relaxed">سيتم حذف <strong id="delete-device-name-label" class="text-[var(--ink)] font-semibold"></strong> وجميع البلاغات المرتبطة به. لا يمكن التراجع عن هذا الإجراء.</p>
+      </div>
+      <div class="modal-foot">
+        <button onclick="closeDeleteDeviceModal()" class="btn btn-secondary">إلغاء</button>
+        <button onclick="confirmDeleteDevice()" class="btn btn-danger">حذف</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="assets/js/app.js"></script>
+</body>
+</html>
