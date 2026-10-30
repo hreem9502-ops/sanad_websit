@@ -79,6 +79,12 @@
       </nav>
 
       <div class="p-3 border-t border-[var(--line)] space-y-1">
+        <div id="backend-status-bar" class="px-3 py-1.5 flex items-center justify-between text-[11.5px] text-[var(--ink-3)]">
+          <span class="inline-flex items-center gap-2">
+            <span id="backend-status-dot" class="w-2 h-2 rounded-full bg-[var(--ink-4)]"></span>
+            <span id="backend-status-label">تخزين محلي · المتصفح</span>
+          </span>
+        </div>
         <button onclick="resetDemoData()" class="nav-item-btn" data-roles="Admin">
           <i data-lucide="rotate-ccw"></i><span>استعادة البيانات الافتراضية</span>
         </button>

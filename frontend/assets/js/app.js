@@ -68,6 +68,95 @@ let selectedTrackingFaultId = 'FLT-2026-002';
 let activeDbTab = 'Devices';
 let chartInstances = {};
 
+/* ---------- الربط التلقائي بالباك إند (Python Flask / Django REST API) ---------- */
+let activeApiBase = null;
+let backendConnected = false;
+let syncTimer = null;
+
+function getApiCandidates() {
+  const list = [];
+  if (location.protocol === 'http:' || location.protocol === 'https:') {
+    if (!location.hostname.endsWith('github.io')) {
+      list.push(`${location.origin}/api`);
+    }
+  }
+  list.push('http://127.0.0.1:5000/api');
+  return [...new Set(list)];
+}
+
+function updateBackendStatusUi(connected, engineLabel) {
+  backendConnected = connected;
+  const dot = document.getElementById('backend-status-dot');
+  const label = document.getElementById('backend-status-label');
+  if (dot) {
+    dot.className = connected
+      ? 'w-2 h-2 rounded-full bg-[var(--ok)]'
+      : 'w-2 h-2 rounded-full bg-[var(--ink-4)]';
+  }
+  if (label) {
+    label.textContent = connected
+      ? `متصل بالخادم · ${engineLabel || 'SQL'}`
+      : 'تخزين محلي · المتصفح';
+  }
+}
+
+async function fetchWithTimeout(url, options = {}, timeoutMs = 1500) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function initBackendConnection() {
+  const candidates = getApiCandidates();
+  for (const base of candidates) {
+    try {
+      const res = await fetchWithTimeout(`${base}/bootstrap`, { method: 'GET' }, 1500);
+      if (res.ok) {
+        const remoteDb = await res.json();
+        if (remoteDb && Array.isArray(remoteDb.devices) && Array.isArray(remoteDb.faults)) {
+          activeApiBase = base;
+          db = remoteDb;
+          migrateDb();
+          try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+          } catch (e) { /* ignore */ }
+          const engine = (remoteDb.backend && remoteDb.backend.engine) || 'SQLite';
+          updateBackendStatusUi(true, engine);
+          renderAll();
+          return true;
+        }
+      }
+    } catch (e) {
+      // Try next candidate or stay in local mode
+    }
+  }
+  updateBackendStatusUi(false);
+  return false;
+}
+
+function syncToBackend() {
+  if (!activeApiBase) return;
+  if (syncTimer) clearTimeout(syncTimer);
+  syncTimer = setTimeout(async () => {
+    try {
+      const res = await fetchWithTimeout(`${activeApiBase}/sync`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(db)
+      }, 3000);
+      if (res.ok) {
+        updateBackendStatusUi(true, (db.backend && db.backend.engine) || 'SQLite');
+      }
+    } catch (e) {
+      updateBackendStatusUi(false);
+    }
+  }, 80);
+}
+
 function loadDb() {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -89,9 +178,24 @@ function saveDb() {
   } catch (e) {
     // Ignore storage quota / sandbox restrictions
   }
+  syncToBackend();
 }
 
-function resetDemoData() {
+async function resetDemoData() {
+  if (activeApiBase) {
+    try {
+      const res = await fetchWithTimeout(`${activeApiBase}/reset`, { method: 'POST' }, 3000);
+      if (res.ok) {
+        db = await res.json();
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(db)); } catch (e) { /* ignore */ }
+        renderAll();
+        showToast('تمت استعادة البيانات الافتراضية في قاعدة البيانات بنجاح', 'success');
+        return;
+      }
+    } catch (e) {
+      // Fall back to local reset
+    }
+  }
   db = JSON.parse(JSON.stringify(DEFAULT_DB));
   saveDb();
   renderAll();
@@ -1922,4 +2026,5 @@ window.addEventListener('DOMContentLoaded', () => {
     openRoute(route);
   }
   refreshIcons();
+  initBackendConnection();
 });

@@ -16,7 +16,9 @@ class User(models.Model):
     Email = models.EmailField(unique=True, verbose_name="البريد الإلكتروني")
     Password = models.CharField(max_length=255, verbose_name="كلمة المرور")
     Role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='User', verbose_name="نوع المستخدم")
+    RoleAr = models.CharField(max_length=50, default='مستخدم', verbose_name="المسمى الوظيفي")
     Department = models.CharField(max_length=100, default='الإدارة العامة', verbose_name="القسم")
+    Phone = models.CharField(max_length=30, blank=True, null=True, verbose_name="رقم التواصل")
 
     class Meta:
         db_table = 'Users'
@@ -62,10 +64,16 @@ class Fault(models.Model):
     Device_ID = models.ForeignKey(Device, on_delete=models.CASCADE, db_column='Device_ID', related_name='faults', verbose_name="الجهاز")
     User_ID = models.ForeignKey(User, on_delete=models.PROTECT, db_column='User_ID', related_name='reported_faults', verbose_name="المبلّغ")
     Assigned_Tech = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, db_column='Assigned_Tech_ID', related_name='assigned_faults', verbose_name="الفني المسؤول")
+    Fault_Category = models.CharField(max_length=100, default='عطل عتاد', verbose_name="تصنيف العطل")
     Priority = models.CharField(max_length=20, default='متوسطة', verbose_name="الأولوية")
     Fault_Description = models.TextField(verbose_name="وصف المشكلة")
-    Report_Date = models.DateTimeField(auto_now_add=True, verbose_name="تاريخ الإبلاغ")
+    Report_Date = models.DateField(auto_now_add=True, verbose_name="تاريخ الإبلاغ")
+    Reported_At = models.DateTimeField(auto_now_add=True, verbose_name="وقت الإبلاغ (SLA)")
+    Closed_At = models.DateTimeField(null=True, blank=True, verbose_name="وقت الإغلاق")
     Status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='جديد', verbose_name="حالة العطل")
+    Rating = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name="تقييم الخدمة (1-5)")
+    Rating_Comment = models.CharField(max_length=500, null=True, blank=True, verbose_name="تعليق التقييم")
+    Rated_At = models.DateTimeField(null=True, blank=True, verbose_name="وقت التقييم")
 
     class Meta:
         db_table = 'Faults'
@@ -77,9 +85,10 @@ class Maintenance(models.Model):
     Maintenance_ID = models.CharField(max_length=30, primary_key=True, verbose_name="رقم الصيانة")
     Fault_ID = models.ForeignKey(Fault, on_delete=models.CASCADE, db_column='Fault_ID', related_name='maintenance_logs', verbose_name="رقم العطل")
     Technician_ID = models.ForeignKey(User, on_delete=models.PROTECT, db_column='Technician_ID', related_name='maintenance_actions', verbose_name="رقم الفني")
-    Maintenance_Date = models.DateTimeField(auto_now_add=True, verbose_name="تاريخ الصيانة")
+    Maintenance_Date = models.DateField(auto_now_add=True, verbose_name="تاريخ الصيانة")
     Action_Taken = models.TextField(verbose_name="الإجراء المتخذ")
     Parts_Replaced = models.CharField(max_length=255, default='لا يوجد', verbose_name="قطع الغيار")
+    Cost = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="التكلفة")
     Notes = models.TextField(blank=True, null=True, verbose_name="الملاحظات")
 
     class Meta:
