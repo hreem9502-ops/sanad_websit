@@ -35,5 +35,7 @@ foreach ($ref in $refs) {
 if ($html -match 'assets/(css|js)/') { throw 'Some local CSS/JS references were not inlined.' }
 
 [System.IO.File]::WriteAllText($outFile, $html, $utf8)
+$rootIndex = Join-Path $root 'index.html'
+[System.IO.File]::WriteAllText($rootIndex, $html, $utf8)
 $size = [math]::Round((Get-Item $outFile).Length / 1KB)
-Write-Host "Built $outFile ($size KB, $($refs.Count) assets inlined)"
+Write-Host "Built $outFile and $rootIndex ($size KB, $($refs.Count) assets inlined)"

@@ -9,7 +9,7 @@ const SCHEMA_VERSION = 2;
 /* رابط النشر العام للنظام (مثل https://sanad.example.com/).
    يُستخدم داخل رموز QR حتى يفتح المسح بالجوال نموذج البلاغ مباشرة.
    إذا تُرك فارغاً يُستخدم رابط الصفحة الحالية عند تشغيلها عبر http/https. */
-const PUBLIC_BASE_URL = '';
+const PUBLIC_BASE_URL = 'https://hreem9502-ops.github.io/sanad_websit/';
 
 /* مهلة الاستجابة (SLA) بالساعات حسب أولوية البلاغ */
 const SLA_HOURS = { 'حرجة': 4, 'عالية': 24, 'متوسطة': 72, 'منخفضة': 120 };
